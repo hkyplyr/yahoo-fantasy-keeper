@@ -1,117 +1,73 @@
-import json
-import os
+from auth import AuthenticationService
 import requests
-import webbrowser
+import time
+
+BASE_URL = 'https://fantasysports.yahooapis.com/fantasy/v2'
+TOKENS_FILE = '.tokens.json'
+
 
 class YahooFantasyApi:
-    def __init__(self, credentials_file, league_id=None):
-        self.credentials_file = open(credentials_file)
-        self.credentials = json.load(self.credentials_file)
-        self.credentials_file.close()
-
-        self.authorize_url = 'https://api.login.yahoo.com/oauth2/request_auth'
-        self.access_token_url = 'https://api.login.yahoo.com/oauth2/get_token'
-
-        self.client_id = self.credentials['client_id']
-        self.client_secret = self.credentials['client_secret']
-
-        self.redirect_uri = 'oob'
-
+    def __init__(self, credentials_file, tokens_file, league_id):
         self.league_id = league_id
-        self.base_url = 'https://fantasysports.yahooapis.com/fantasy/v2'
+        self.auth_service = AuthenticationService(credentials_file, tokens_file)
+        self.__set_tokens()
 
-        tokens = self.retrieve_tokens()
+    def __set_tokens(self):
+        self.access_token = self.auth_service.get_access_token()
+        self.refresh_token = self.auth_service.get_refresh_token()
+        self.expires_by = self.auth_service.get_expires_by()
 
-        if tokens:
-            self.set_tokens(tokens)
-        else:
-            self.get_initial_tokens()
+    def __check_tokens(self):
+        if time.time() > self.expires_by:
+            self.auth_service.refresh_tokens()
+            self.__set_tokens()
 
-    def get_initial_tokens(self):
-        data = {
-            'client_id': self.client_id,
-            'client_secret': self.client_secret,
-            'redirect_uri': 'oob',
+    #############################
+    # Yahoo Fantasy Api methods
+    #############################
+    def __get(self, path):
+        self.__check_tokens()
+        params = {'format': 'json'}
+        headers = {'Authorization': 'Bearer {}'.format(self.access_token)}
+        url = '{}/{}'.format(BASE_URL, path)
 
-            'response_type': 'code',
-            'language': 'en-us',
-        }
+        return requests.get(url, params=params, headers=headers).json()
 
-        res = requests.post(self.authorize_url, params=data, headers={'Content-Type': 'application/json'})
-        webbrowser.open(res.url)
+    def __get_game_resource(self, sub_resource):
+        path = 'game/nhl/{}'.format(sub_resource)
+        return self.__get(path)
 
-        code = raw_input('Enter code: ')
+    def __get_league_resource(self, sub_resource):
+        path = 'league/nhl.l.{}/{}'.format(self.league_id, sub_resource)
+        return self.__get(path)
 
-        data = {
-            'client_id': self.client_id,
-            'client_secret': self.client_secret,
-            'redirect_uri': 'oob',
-            'code': code,
-            'grant_type': 'authorization_code',
-        }
+    def __get_player_resource(self, sub_resource, player_id):
+        path = 'player/nhl.p.{}/{}'.format(player_id, sub_resource)
+        return self.__get(path)
 
-        response = requests.post(self.access_token_url, data=data)
+    def __get_team_resource(self, sub_resource, team_id):
+        path = 'team/nhl.l.{}.t.{}/{}'.format(self.league_id, team_id, sub_resource)
+        return self.__get(path)
 
-        self.set_tokens(response.json())
-        self.cache_tokens()
-    
-    def set_tokens(self, data):
-        self.access_token = data['access_token']
-        self.refresh_token = data['refresh_token']
+    def __get_transaction_resource(self, sub_resource, transaction_id):
+        path = 'team/nhl.l.{}.tr.{}/{}'.format(self.league_id, transaction_id, sub_resource)
+        return self.__get(path)
 
-    def cache_tokens(self):
-        tokens = {
-            'access_token': self.access_token,
-            'refresh_token': self.refresh_token,
-        }
-
-        with open('.tokens.json', 'w') as f:
-            f.write(json.dumps(tokens))
-    
-    def retrieve_tokens(self):
-        if not os.path.exists('.tokens.json'):
-            return None
-        
-        with open('.tokens.json', 'r') as f:
-            tokens = json.loads(f.read())
-        return tokens
-
-    def refresh_tokens(self):
-        data = {
-            'client_id': self.client_id,
-            'client_secret': self.client_secret,
-            'redirect_uri': 'oob',
-            'refresh_token': self.refresh_token,
-            'grant_type': 'refresh_token',
-        }
-
-        response = request.post(self.access_token_url, data=data)
-
-        self.set_tokens(response.json())
-        self.cache_tokens()
-
-    def get(self, path):
-        url = '{}/{}'.format(self.base_url, path)
-        response = requests.get(url, params={'format':'json'}, headers={'Authorization': 'Bearer {}'.format(self.access_token)})
-        return response.json()
-    
+    #############################
+    # Public facing Api methods
+    #############################
     def get_standings(self):
-        path = 'leagues;league_keys=nhl.l.{}/standings'.format(self.league_id)
-        return self.get(path)
+        return self.__get_league_resource('standings')
 
     def get_roster(self, team_id):
-        path = 'team/nhl.l.{}.t.{}/roster/players'.format(self.league_id, team_id)
-        return self.get(path)
+        return self.__get_team_resource('roster/players', team_id)
 
     def get_scoreboard(self, week):
-        path = 'leagues;league_keys=nhl.l.{}/scoreboard;week={}'.format(self.league_id, week)
-        return self.get(path)
-    
+        return self.__get_league_resource('scoreboard;week={}'.format(week))
+
     def get_matchups(self, team_id, weeks_arr):
         weeks = ','.join(str(c) for c in weeks_arr)
-        path = 'team/nhl.l.{}.t.{}/matchups;weeks={}'.format(self.league_id, team_id, weeks)
-        return self.get(path)
+        return self.__get_team_resource('matchups;weeks{}'.format(weeks), team_id)
 
     def get_stats(self, team_id, date):
-        path = 'team/nhl.l.{}.t.{}/roster;type=date;date={}/players/stats'.format(self.league_id, team_id, date)
-        return self.get(path)
+        return self.__get_team_resource('roster;type=date;date={}/players/stats'.format(date), team_id)

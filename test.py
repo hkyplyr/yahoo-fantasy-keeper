@@ -1,15 +1,18 @@
 from api import YahooFantasyApi
-from collections import OrderedDict
-from constants import STAT_MAP, FANTASY_CONTENT
 from operator import itemgetter
-from player import Player
-from player import Players
 import heapq
-import psycopg2
 credentials_file = 'credentials.json'
+tokens_file = '.tokens.json'
 league_id = 175
 
-yfs = YahooFantasyApi(credentials_file, league_id=league_id)
+FANTASY_CONTENT = 'fantasy_content'
+STAT_MAP = {1: 'goals', 2: 'assists', 4:'plus_minus',
+            8: 'power_play_points', 11: 'short-handed-points',
+            14: 'shots', 31: 'hits', 32: 'blocks',
+            19: 'wins', 20: 'losses', 22: 'goals_against',
+            25: 'saves', 27: 'shutouts'}
+
+yfs = YahooFantasyApi(credentials_file, tokens_file, league_id=league_id)
 def get_stats_map(stats):
     stat_map = {}
     for stat in stats:
@@ -41,15 +44,15 @@ def get_win_streak():
 
                 team_id = teams[team]['team'][0][1]['team_id']
                 if team_id == winner:
-                    #print 'Team {} won'.format(team_id)
+                    #print('Team {} won'.format(team_id))
                     team_map[team_id]['current'] += 1
                 if team_map[team_id]['current'] > team_map[team_id]['longest']:
                         team_map[team_id]['longest'] = team_map[team_id]['current']
                 if team_id != winner:
-                    #print 'Team {} lost'.format(team_id)
+                    #print('Team {} lost'.format(team_id))
                     team_map[team_id]['current'] = 0
-    for team in sorted(team_map.iteritems(), key=lambda (x,y): y['current'], reverse=True):
-        print team
+    for team in sorted(team_map.items(), key=itemgetter(1), reverse=True):
+        print(team)
 
 def get_eligible_positions(player_data):
     for field in player_data:
@@ -57,12 +60,12 @@ def get_eligible_positions(player_data):
             return [pos['position'].encode("utf-8") for pos in field['eligible_positions']]
 
 def get_max_goalies(goalie_dict):
-    print goalie_dict
-    print dict(heapq.nlargest(2, goalie_dict.iteritems(), key=itemgetter(1)))
+    print(goalie_dict)
+    print(dict(heapq.nlargest(2, goalie_dict.items(), key=itemgetter(1))))
 
 def get_max_defense(defense_dict):
-    print defense_dict
-    print dict(heapq.nlargest(5, defense_dict.iteritems(), key=itemgetter(1)))
+    print(defense_dict)
+    print(dict(heapq.nlargest(5, defense_dict.items(), key=itemgetter(1))))
 
 
 def get_missed():
@@ -88,12 +91,31 @@ def get_missed():
     get_max_goalies(goalies)
     get_max_defense(defense)
 
+def standings():
+    standings_data = yfs.get_standings()
+    teams = standings_data[FANTASY_CONTENT]['league'][1]['standings'][0]['teams']
+    for team in teams:
+        if team == 'count':
+            continue
 
+        team_info = teams[team]['team'][0]
+        team_id = team_info[1]['team_id']
+        team_stats = teams[team]['team'][1]['team_stats']
+        team_standings = teams[team]['team'][2]['team_standings']
+        rank = team_standings['rank']
+        points_for = team_standings['points_for']
+        points_agains = team_standings['points_against']
+
+        wins = team_standings['outcome_totals']['wins']
+        losses = team_standings['outcome_totals']['losses']
+        ties = team_standings['outcome_totals']['ties']
+
+        print('{}: {}-{}-{}'.format(team_id, wins, losses, ties))
 
 def matchups():
     for t in range(1, 11):
         for wk in range(1, 5):
-            print 'Getting matchup for team:{} week:{}'.format(t, wk)
+            print('Getting matchup for team:{} week:{}'.format(t, wk))
             matchup_data = yfs.get_matchups(t, [wk])
             matchups = matchup_data[FANTASY_CONTENT]['team'][1]['matchups']
             for matchup in matchups:
@@ -112,14 +134,14 @@ def matchups():
                     team_data = teams[team]['team'][1]
                     # Total points scored by a team in a given week
                     team_points = team_data['team_points']['total']
-                    print 'Team {} scored {} points'.format(t, team_points)
+                    print('Team {} scored {} points'.format(t, team_points))
                     # Totals of all stats for a team in a given week
                     team_stats = get_stats_map(team_data['team_stats']['stats'])
 
        
 
 def main():
-    get_missed()
+    standings()
 
 if __name__ == '__main__':
     main()
