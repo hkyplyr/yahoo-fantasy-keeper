@@ -71,3 +71,9 @@ class YahooFantasyApi:
 
     def get_stats(self, team_id, date):
         return self.__get_team_resource('roster;type=date;date={}/players/stats'.format(date), team_id)
+
+    def get_draft_results(self):
+        return self.__get_league_resource('draftresults')
+
+    def get_teams(self):
+        return self.__get_league_resource('teams')

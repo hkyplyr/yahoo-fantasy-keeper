@@ -1,6 +1,8 @@
 from api import YahooFantasyApi
+from standings import Standings
 from operator import itemgetter
 import heapq
+import sqlite3
 credentials_file = 'credentials.json'
 tokens_file = '.tokens.json'
 league_id = 175
@@ -34,7 +36,7 @@ def get_win_streak():
         for matchup in matchups:
             if matchup == 'count':
                 continue
-            
+
             winner = matchups[matchup]['matchup']['winner_team_key'][12:]
 
             teams = matchups[matchup]['matchup']['0']['teams']
@@ -76,14 +78,14 @@ def get_missed():
     for player in players:
         if player == 'count':
             continue
-        
+
         player_id = players[player]['player'][0][1]['player_id']
         eligible_positions = get_eligible_positions(players[player]['player'][0])
         selected_position = players[player]['player'][1]['selected_position'][1]['position']
         player_points = players[player]['player'][2]['player_points']['total']
         player_stats = players[player]['player'][2]['player_stats']['stats']
 
-        
+
         if 'G' in eligible_positions:
             goalies[player_id] = player_points
         if 'D' in eligible_positions:
@@ -126,7 +128,7 @@ def matchups():
                 for team in teams:
                     if team == 'count':
                         continue
-            
+
                     team_key = teams[team]['team'][0][1]['team_id']
                     if team_key != str(t):
                         continue
@@ -138,10 +140,115 @@ def matchups():
                     # Totals of all stats for a team in a given week
                     team_stats = get_stats_map(team_data['team_stats']['stats'])
 
-       
+
+def get_draft_map():
+    draft_map = {}
+    data = yfs.get_draft_results()
+    draft_results = data['fantasy_content']['league'][1]['draft_results']
+    for pk in draft_results:
+        if pk == 'count':
+            continue
+
+        draft_result = draft_results[pk]['draft_result']
+        player_id = draft_result['player_key'][6:]
+        team_id = draft_result['team_key'][12:]
+        pick = draft_result['pick']
+        rd = draft_result['round']
+
+        draft_map[player_id] = rd
+    return draft_map
+
+def __getOrRaiseError(data, key):
+    value = data.get(key)
+    if value is not None:
+        return value
+    raise KeyError("{} is not present.".format(key))
+
+def save_team(team_map):
+    for key in team_map:
+        print(key, team_map.get(key))
+    print('')
+
+    team_id = __getOrRaiseError(team_map, 'team_id')
+    name = __getOrRaiseError(team_map, 'name')
+    url = __getOrRaiseError(team_map, 'url')
+    logo = __getOrRaiseError(team_map, 'team_logos')[0]['team_logo']['url']
+    waiver = __getOrRaiseError(team_map, 'waiver_priority')
+    faab = __getOrRaiseError(team_map, 'faab_balance')
+    moves = __getOrRaiseError(team_map, 'number_of_moves')
+    trades = __getOrRaiseError(team_map, 'number_of_trades')
+    manager = __getOrRaiseError(team_map, 'managers')[0].get('manager')
+    manager_name = manager.get('nickname')
+    manager_email = manager.get('email')
+    manager_logo = manager.get('image_url')
+    print(team_id, name, url, logo, waiver,faab, moves, trades, manager_name, manager_email, manager_logo)
+
+    rv = sqlite3.connect('keeper/keeper/keeper.db')
+    rv.row_factory = sqlite3.Row
+
+    rv.execute('insert into teams (id, name, url, logo_url, waiver, faab, moves, trades, mgr_name, mgr_email, mgr_logo)' +
+               ' values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [team_id, name, url, logo, waiver, faab, moves, trades,
+               manager_name, manager_email, manager_logo])
+    rv.commit()
 
 def main():
-    standings()
+    data = yfs.get_teams()
+    teams = data['fantasy_content']['league'][1]['teams']
+
+    for team in teams:
+        team_map = {}
+        if team == 'count':
+            continue
+
+        team_info = teams[team]['team'][0]
+        for info_item in team_info:
+            if type(info_item) is list:
+                continue
+
+            for key, value in info_item.items():
+                team_map[key] = value
+        save_team(team_map)
+
+
+
+    """
+    d_m = get_draft_map()
+
+    for tm in range(1, 11):
+        data = yfs.get_roster(tm)
+        team_name = data['fantasy_content']['team'][0][2]['name']
+        print("\n;;;Keeper values for {}".format(team_name))
+        players = data['fantasy_content']['team'][1]['roster']['0']['players']
+
+        for player in players:
+            if player == 'count':
+                continue
+
+            player_info = players[player]['player'][0]
+
+            for item in player_info:
+                if 'player_id' in item:
+                    pid = item['player_id']
+                if 'name' in item:
+                    name = item['name']['full']
+                if 'display_position' in item:
+                    pos = item['display_position']
+                if 'editorial_team_abbr' in item:
+                    nhl_tm = item['editorial_team_abbr'].upper()
+
+            if pid in d_m:
+                keeper_round = d_m[pid]
+            else:
+                keeper_round = 19
+            print("{};{};{};{}".format(keeper_round-1, pos, nhl_tm, name))
+
+
+
+
+            #print("{} - {} - {} - {}".format(keeper_round, pos, nhl_tm, keeper_round))
+"""
+
+
 
 if __name__ == '__main__':
     main()

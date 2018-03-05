@@ -3,6 +3,8 @@ credentials.json
 .tokens.json
 .idea
 
+.DS_Store
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -29,6 +31,7 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+*.in
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

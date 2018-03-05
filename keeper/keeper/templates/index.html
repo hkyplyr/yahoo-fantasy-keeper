@@ -1,0 +1,16 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <title>Fantasy Draft</title>
+    <script type="text/javascript" src="//code.jquery.com/jquery-1.4.2.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/1.3.5/socket.io.min.js"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='draft.js') }}"></script>
+</head>
+<body>
+    <h1>Fantasy Draft</h1>
+    <form id="draft" method="POST" action="#">
+        <input type="text" name="draft_data" id="draft_data" placeholder="Player">
+        <input type="submit" value="Draft">
+    </form>
+</body>
+</html>
