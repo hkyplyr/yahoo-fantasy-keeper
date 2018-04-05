@@ -3,13 +3,11 @@ import requests
 import time
 
 BASE_URL = 'https://fantasysports.yahooapis.com/fantasy/v2'
-TOKENS_FILE = '.tokens.json'
-
 
 class YahooFantasyApi:
-    def __init__(self, credentials_file, tokens_file, league_id):
+    def __init__(self, league_id):
         self.league_id = league_id
-        self.auth_service = AuthenticationService(credentials_file, tokens_file)
+        self.auth_service = AuthenticationService()
         self.__set_tokens()
 
     def __set_tokens(self):
@@ -77,3 +75,12 @@ class YahooFantasyApi:
     
     def get_draft(self):
         return self.__get_league_resource('draftresults')
+
+    def get_player(self, player_id):
+        return self.__get_player_resource('metadata', player_id)
+    
+    def get_players(self, start):
+        return self.__get_league_resource('players;start={}'.format(start))
+
+    def get_transactions(self):
+        return self.__get_league_resource('transactions')

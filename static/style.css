@@ -55,8 +55,60 @@ table {
 }
 
 th, td {
-    text-align: left;
-    padding: 8px;
+    text-align: center;
+    padding: 5px;
+}
+
+td[class="Stevie Wonder 19"] {
+    background-color: #F1CDA2;
+}
+
+td[class="OEL Sweedwagon"] {
+    background-color:  #EA9A99;
+}
+
+td[class="Poop hole lupul"] {
+    background-color:  #B1A7D3;
+}
+
+td[class="Slap Shot 17"] {
+    background-color: #9FC5E9;
+}
+
+td[class="Fabian Mayer's Team"] {
+    background-color: #BDD6AC;
+}
+
+td[class="DontHasselTheHoffman"] {
+    background-color: #CEA8BC;
+}
+
+td[class="HockeyMind"] {
+    background-color: #A8C3C8;
+}
+
+td[class="McDavid & Goaliath"] {
+    background-color: #FAE6A3;
+}
+
+td[class="Jagr Bombs"] {
+    background-color: #BCC3C3;
+}
+
+td[class="I Kane too early"] {
+    background-color: #CE9589;
+}
+
+td[class="D"] {
+    background-color: #BDD6AC;
+}
+
+td[class="G"] {
+    background-color: #EA9A99;
+}
+
+td[class*="C"], td[class*="LW"], td[class*="RW"] {
+    background-color: #9FC5E9;
 }
 
 tr:nth-child(even) {

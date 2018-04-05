@@ -14,8 +14,8 @@
                 <a href="#" class="dropbtn">Teams</a>
                 <div class="dropdown-content">
                     {% for team in teams %}
-                    {% if team.t_id != 0 %}
-                        <a href="/teams/{{ team.t_id }}">{{ team.name }}</a>
+                    {% if team.team_id != 0 %}
+                        <a href="/teams/{{ team.team_id }}">{{ team.name }}</a>
                     {% else %}
                     {% endif %}
                     {% endfor %}

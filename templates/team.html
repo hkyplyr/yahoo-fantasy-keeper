@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+{% block title %}{{ teams[team_id].name }}{% endblock %}
+{% block body %}
+<h1>{{ teams[team_id].name }} - {{ teams[team_id].manager }}</h1>
+<div style="overflow-x:auto;">
+
+<h2>Picks</h2>
+<table border=1>
+<tr>
+{% for pick in picks %}
+    {% if pick.original_id != pick.owner_id %}
+    <td>{{ pick.draft_round }} ({{ teams[pick.original_id-1].name }})</td>
+    {% else %}
+    <td>{{ pick.draft_round }}</td>
+    {% endif %}
+{% endfor %}
+</tr>
+</table>
+<h2>Players</h2>
+<table id="players" class="sortable" border=1>
+    <tr>
+        <th>Position</th>
+        <th>Name</th>
+        <th>Rd</th>
+    </tr>
+{% for player in players %}
+    <tr>
+        <td>{{ player.position }}</td>
+        <td>{{ player.first_name }} {{ player.last_name }}</td>
+        <td>{{ player.round - 1 }}</td>
+    </tr>
+{% else %}
+    <tr>
+        <td>No players.</td>
+    </tr>
+{% endfor %}
+</table>
+</div>
+{% endblock %}
